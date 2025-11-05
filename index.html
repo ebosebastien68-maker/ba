@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceBank - Épargne & Prêt 3D</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babylon/5.57.1/babylon.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            background: #0a0e27;
+            color: #fff;
+        }
+
+        #renderCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            outline: none;
+        }
+
+        #intro {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s;
+        }
+
+        #intro.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #intro h1 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 10px #ffd700); }
+            50% { filter: drop-shadow(0 0 30px #ffd700); }
+        }
+
+        #intro .loader {
+            font-size: 1.5rem;
+            color: #ffd700;
+            margin-top: 20px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 50px;
+            background: rgba(10, 14, 39, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        nav a:hover {
+            color: #ffd700;
+            transform: translateY(-2px);
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #ffd700;
+            transition: width 0.3s;
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        .auth-btns {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #0a0e27;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #ffd700;
+            border: 2px solid #ffd700;
+        }
+
+        .btn-secondary:hover {
+            background: #ffd700;
+            color: #0a0e27;
+        }
+
+        section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 100px 20px;
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        section.visible {
+            animation: fadeInUp 1s forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero {
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ffd700, #fff, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            width: 100%;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            padding: 40px;
+            transition: all 0.5s;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 60px rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+        }
+
+        .service-card h3 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .service-card p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .form-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border: 2px solid #ffd700;
+            border-radius: 30px;
+            padding: 50px;
+            z-index: 200;
+            min-width: 400px;
+            box-shadow: 0 30px 80px rgba(255, 215, 0, 0.5);
+        }
+
+        .form-modal.active {
+            display: block;
+            animation: modalIn 0.5s;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .form-modal h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #ffd700;
+            font-size: 2.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #ffd700;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .close-modal:hover {
+            transform: rotate(90deg);
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 199;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+            margin: 80px 0;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .stat-item .number {
+            font-size: 3rem;
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-item .label {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 3rem;
+            }
+            
+            header {
+                padding: 15px 20px;
+            }
+            
+            nav {
+                display: none;
+            }
+            
+            .form-modal {
+                min-width: 90%;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="intro">
+        <h1>FinanceBank 3D</h1>
+        <div class="loader">Chargement de votre expérience 3D...</div>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <div class="overlay" id="overlay"></div>
+
+    <header>
+        <div class="logo">💰 FinanceBank</div>
+        <nav>
+            <a href="#accueil">Accueil</a>
+            <a href="#services">Services</a>
+            <a href="#epargne">Épargne</a>
+            <a href="#prets">Prêts</a>
+        </nav>
+        <div class="auth-btns">
+            <button class="btn btn-secondary" onclick="openModal('login')">Connexion</button>
+            <button class="btn btn-primary" onclick="openModal('register')">Inscription</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="accueil" class="hero">
+            <h1>Votre Avenir Financier Commence Ici</h1>
+            <p>Solutions d'épargne et de prêt innovantes en 3D</p>
+            <button class="btn btn-primary" style="font-size: 1.2rem; padding: 18px 50px;">
+                Découvrir nos offres
+            </button>
+        </section>
+
+        <section id="services">
+            <div style="width: 100%;">
+                <h2 style="text-align: center; font-size: 3.5rem; margin-bottom: 60px; color: #ffd700;">
+                    Nos Services
+                </h2>
+                <div class="services">
+                    <div class="service-card">
+                        <h3>💳 Comptes Épargne</h3>
+                        <p>Des taux d'intérêt compétitifs pour faire fructifier votre argent en toute sécurité. Accédez à vos fonds quand vous en avez besoin.</p>
+                    </div>
+                    <div class="service-card">
+                        <h3>🏠 Prêts Immobiliers</h3>
+                        <p>Financez votre maison de rêve avec des conditions avantageuses et un accompagnement personnalisé tout au long du processus.</p>
+                    </div>
+                    <div class="service-card">
+                        <h3>🚗 Crédits Auto</h3>
+                        <p>Obtenez le véhicule que vous désirez avec des mensualités adaptées à votre budget et une réponse rapide.</p>
+                    </div>
+                    <div class="service-card">
+                        <h3>💼 Prêts Personnels</h3>
+                        <p>Réalisez vos projets personnels avec des solutions flexibles et des taux avantageux sans justificatif d'utilisation.</p>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="number">50K+</div>
+                        <div class="label">Clients Satisfaits</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="number">2.5%</div>
+                        <div class="label">Taux Épargne</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="number">24/7</div>
+                        <div class="label">Support Client</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="number">15+</div>
+                        <div class="label">Années d'Expérience</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="epargne">
+            <div style="text-align: center;">
+                <h2 style="font-size: 3.5rem; margin-bottom: 30px; color: #ffd700;">Épargne Intelligente</h2>
+                <p style="font-size: 1.3rem; margin-bottom: 40px; max-width: 800px;">
+                    Faites croître votre patrimoine avec nos solutions d'épargne sur mesure. Profitez de rendements attractifs et d'une disponibilité optimale.
+                </p>
+                <button class="btn btn-primary" style="font-size: 1.2rem; padding: 18px 50px;">
+                    Ouvrir un compte épargne
+                </button>
+            </div>
+        </section>
+
+        <section id="prets">
+            <div style="text-align: center;">
+                <h2 style="font-size: 3.5rem; margin-bottom: 30px; color: #ffd700;">Prêts Avantageux</h2>
+                <p style="font-size: 1.3rem; margin-bottom: 40px; max-width: 800px;">
+                    Concrétisez vos projets avec nos solutions de financement flexibles. Simulation en ligne, réponse rapide et accompagnement personnalisé.
+                </p>
+                <button class="btn btn-primary" style="font-size: 1.2rem; padding: 18px 50px;">
+                    Simuler mon prêt
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <div class="form-modal" id="loginModal">
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+        <h2>Connexion</h2>
+        <form>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" placeholder="votre@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                Se connecter
+            </button>
+        </form>
+    </div>
+
+    <div class="form-modal" id="registerModal">
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+        <h2>Inscription</h2>
+        <form>
+            <div class="form-group">
+                <label>Nom complet</label>
+                <input type="text" placeholder="Jean Dupont" required>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" placeholder="votre@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" placeholder="••••••••" required>
+            </div>
+            <div class="form-group">
+                <label>Confirmer le mot de passe</label>
+                <input type="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                S'inscrire
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+        let scene, camera;
+
+        function createScene() {
+            scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.04, 0.05, 0.15, 0);
+
+            camera = new BABYLON.ArcRotateCamera("camera", 0, 1, 15, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.lowerRadiusLimit = 8;
+            camera.upperRadiusLimit = 25;
+
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+            light.intensity = 0.7;
+
+            const pointLight = new BABYLON.PointLight("pointLight", new BABYLON.Vector3(0, 5, -5), scene);
+            pointLight.diffuse = new BABYLON.Color3(1, 0.84, 0);
+            pointLight.intensity = 0.8;
+
+            // Intro: Avatar dansant avec billets
+            createDancingAvatar();
+
+            // Après 10 secondes, créer la scène principale
+            setTimeout(() => {
+                document.getElementById('intro').classList.add('hidden');
+                createMainScene();
+            }, 10000);
+
+            return scene;
+        }
+
+        function createDancingAvatar() {
+            // Corps de l'avatar
+            const body = BABYLON.MeshBuilder.CreateCylinder("body", {height: 2, diameter: 0.8}, scene);
+            body.position.y = 1;
+            const bodyMat = new BABYLON.StandardMaterial("bodyMat", scene);
+            bodyMat.diffuseColor = new BABYLON.Color3(0.2, 0.4, 0.8);
+            body.material = bodyMat;
+
+            // Tête
+            const head = BABYLON.MeshBuilder.CreateSphere("head", {diameter: 0.6}, scene);
+            head.position.y = 2.5;
+            const headMat = new BABYLON.StandardMaterial("headMat", scene);
+            headMat.diffuseColor = new BABYLON.Color3(0.9, 0.7, 0.6);
+            head.material = headMat;
+
+            // Bras gauche
+            const leftArm = BABYLON.MeshBuilder.CreateCylinder("leftArm", {height: 1.5, diameter: 0.3}, scene);
+            leftArm.position = new BABYLON.Vector3(-0.6, 1.5, 0);
+            leftArm.rotation.z = 0.5;
+            leftArm.material = bodyMat;
+
+            // Bras droit
+            const rightArm = BABYLON.MeshBuilder.CreateCylinder("rightArm", {height: 1.5, diameter: 0.3}, scene);
+            rightArm.position = new BABYLON.Vector3(0.6, 1.5, 0);
+            rightArm.rotation.z = -0.5;
+            rightArm.material = bodyMat;
+
+            // Billets de dollars dans les mains
+            for (let i = 0; i < 6; i++) {
+                const bill = BABYLON.MeshBuilder.CreatePlane("bill" + i, {width: 0.6, height: 0.3}, scene);
+                const billMat = new BABYLON.StandardMaterial("billMat" + i, scene);
+                billMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+                billMat.emissiveColor = new BABYLON.Color3(0.5, 1, 0.5);
+                bill.material = billMat;
+                
+                if (i < 3) {
+                    bill.position = new BABYLON.Vector3(-1, 2 + i * 0.2, 0);
+                    bill.parent = leftArm;
+                } else {
+                    bill.position = new BABYLON.Vector3(1, 2 + (i-3) * 0.2, 0);
+                    bill.parent = rightArm;
+                }
+                
+                // Animation des billets
+                scene.registerBeforeRender(() => {
+                    bill.rotation.y += 0.02;
+                    bill.position.y += Math.sin(Date.now() * 0.003 + i) * 0.002;
+                });
+            }
+
+            // Animation de danse
+            let angle = 0;
+            scene.registerBeforeRender(() => {
+                angle += 0.03;
+                body.rotation.y = Math.sin(angle) * 0.3;
+                leftArm.rotation.z = 0.5 + Math.sin(angle * 2) * 0.3;
+                rightArm.rotation.z = -0.5 - Math.sin(angle * 2) * 0.3;
+                body.position.y = 1 + Math.abs(Math.sin(angle * 2)) * 0.2;
+            });
+        }
+
+        function createMainScene() {
+            scene.meshes.forEach(mesh => {
+                if (mesh.name.includes('body') || mesh.name.includes('head') || 
+                    mesh.name.includes('Arm') || mesh.name.includes('bill')) {
+                    mesh.dispose();
+                }
+            });
+
+            // Particules dorées
+            const particleSystem = new BABYLON.ParticleSystem("particles", 2000, scene);
+            particleSystem.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", scene);
+            particleSystem.emitter = new BABYLON.Vector3(0, 0, 0);
+            particleSystem.minEmitBox = new BABYLON.Vector3(-10, -10, -10);
+            particleSystem.maxEmitBox = new BABYLON.Vector3(10, 10, 10);
+            particleSystem.color1 = new BABYLON.Color4(1, 0.84, 0, 1);
+            particleSystem.color2 = new BABYLON.Color4(1, 0.93, 0.3, 1);
+            particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+            particleSystem.minSize = 0.1;
+            particleSystem.maxSize = 0.5;
+            particleSystem.minLifeTime = 2;
+            particleSystem.maxLifeTime = 4;
+            particleSystem.emitRate = 100;
+            particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+            particleSystem.gravity = new BABYLON.Vector3(0, -0.5, 0);
+            particleSystem.direction1 = new BABYLON.Vector3(-1, 1, -1);
+            particleSystem.direction2 = new BABYLON.Vector3(1, 1, 1);
+            particleSystem.minAngularSpeed = 0;
+            particleSystem.maxAngularSpeed = Math.PI;
+            particleSystem.minEmitPower = 1;
+            particleSystem.maxEmitPower = 3;
+            particleSystem.updateSpeed = 0.01;
+            particleSystem.start();
+
+            // Formes géométriques animées
+            const shapes = [];
+            const geometries = [
+                () => BABYLON.MeshBuilder.CreateBox("box", {size: 1}, scene),
+                () => BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 1}, scene),
+                () => BABYLON.MeshBuilder.CreateTorus("torus", {diameter: 1.5, thickness: 0.3}, scene),
+                () => BABYLON.MeshBuilder.CreateCylinder("cylinder", {height: 1.5, diameter: 0.8}, scene)
+            ];
+
+            for (let i = 0; i < 12; i++) {
+                const shape = geometries[Math.floor(Math.random() * geometries.length)]();
+                const mat = new BABYLON.StandardMaterial("mat" + i, scene);
+                mat.diffuseColor = new BABYLON.Color3(
+                    0.5 + Math.random() * 0.5,
+                    0.5 + Math.random() * 0.5,
+                    Math.random()
+                );
+                mat.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.3);
+                mat.alpha = 0.6;
+                shape.material = mat;
+                
+                const radius = 8 + Math.random() * 4;
+                const angle = (i / 12) * Math.PI * 2;
+                shape.position = new BABYLON.Vector3(
+                    Math.cos(angle) * radius,
+                    Math.random() * 4 - 2,
+                    Math.sin(angle) * radius
+                );
+                
+                shapes.push({mesh: shape, speed: 0.001 + Math.random() * 0.002, radius, baseAngle: angle});
+            }
+
+            // Animation des formes
+            scene.registerBeforeRender(() => {
+                shapes.forEach((obj, i) => {
+                    obj.baseAngle += obj.speed;
+                    obj.mesh.position.x = Math.cos(obj.baseAngle) * obj.radius;
+                    obj.mesh.position.z = Math.sin(obj.baseAngle) * obj.radius;
+                    obj.mesh.rotation.x += 0.01;
+                    obj.mesh.rotation.y += 0.01;
+                    obj.mesh.position.y += Math.sin(Date.now() * 0.001 + i) * 0.01;
+                });
+            });
+        }
+
+        createScene();
+        engine.runRenderLoop(() => {
+            scene.render();
+        });
+
+        window.addEventListener("resize", () => {
+            engine.resize();
+        });
+
+        // Animations au scroll
+        const sections = document.querySelectorAll('section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.2 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // Modales
+        function openModal(type) {
+            const overlay = document.getElementById('overlay');
+            overlay.classList.add('active');
+            
+            if (type === 'login') {
+                document.getElementById('loginModal').classList.add('active');
+            } else {
+                document.getElementById('registerModal').classList.add('active');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('loginModal').classList.remove('active');
+            document.getElementById('registerModal').classList.remove('active');
+        }
+
+        document.getElementById('overlay').addEventListener('click', closeModal);
+
+        // Rotation automatique de la caméra
+        setInterval(() => {
+            if (camera) {
+                gsap.to(camera, {
+                    alpha: camera.alpha + 0.3,
+                    duration: 2,
+                    ease: "power2.inOut"
+                });
+            }
+        }, 8000);
+    </script>
+</body>
+                  </html>
